@@ -1,0 +1,41 @@
+============================================================
+  MÉTADONNÉES DE TRAÇABILITÉ — Lab 16
+============================================================
+
+Analyste       : Étudiant Sécurité
+Cours          : Sécurité Mobile — Lab 16
+Sujet          : Inspection HTTPS Android — Désactivation du SSL Pinning
+                 avec Objection + Proxy (Burp/mitmproxy)
+Date           : 2026-06-08
+Durée estimée  : 2h30
+Outils         : Objection 1.11.0 · Frida 16.5.9 · Burp Suite / mitmproxy · ADB
+Cible          : Application Android avec SSL Pinning (TrustManager/OkHttp)
+Appareil       : Android 8+ (Débogage USB activé)
+Référentiel    : OWASP MASVS v2.0 / MASTG — MASVS-NETWORK
+Statut         : ✅ Complété
+
+============================================================
+  PÉRIMÈTRE
+============================================================
+- Uniquement sur appareils/applications contrôlés
+- Cadre pédagogique et défensif
+- Aucune donnée réelle exposée
+- Certificat CA et frida-server retirés après tests
+
+============================================================
+  VERSIONS
+============================================================
+Python         : 3.11.x
+Frida (client) : 16.5.9
+frida-server   : 16.5.9 (android-arm64)
+Objection      : 1.11.0
+Burp Suite     : Community/Pro (dernière version)
+mitmproxy      : 10.x
+ADB            : 1.0.41
+
+============================================================
+  DIFFÉRENCE AVEC LAB 15
+============================================================
+Lab 15 : approche multi-couches (Frida scripts JS + natif + Objection)
+Lab 16 : focus EXCLUSIF sur Objection (CLI) + Proxy — pas de scripts
+         Frida manuels. Workflow simplifié pour bypass rapide.

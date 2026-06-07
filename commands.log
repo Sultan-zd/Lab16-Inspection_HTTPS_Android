@@ -1,0 +1,110 @@
+============================================================
+  LOG CHRONOLOGIQUE DES COMMANDES — Lab 16
+  Inspection HTTPS Android : SSL Pinning Bypass avec Objection + Proxy
+============================================================
+
+# ─── ÉTAPE 0 : Vérifications rapides ────────────────────
+python --version                                           # Python 3.11.x
+pip --version                                              # pip 24.x
+adb version                                                # 1.0.41
+adb devices                                                # → <serial> device
+
+# ─── ÉTAPE 1 : Installation Objection et Frida (PC) ─────
+pip install --user pipx                                    # Option isolée
+pipx ensurepath
+pipx install objection
+# OU via pip classique :
+pip install --upgrade objection frida frida-tools
+
+# Vérification :
+objection --version                                        # → 1.11.0+
+frida --version                                            # → 16.5.9
+python -c "import frida; print(frida.__version__)"         # → 16.5.9
+
+# ─── ÉTAPE 2 : Préparer l'appareil et frida-server ──────
+adb devices                                                # → <serial> device
+adb shell getprop ro.product.cpu.abi                       # → arm64-v8a
+
+# Télécharger frida-server depuis https://github.com/frida/frida/releases
+# Décompresser avec 7-Zip
+
+adb push frida-server-16.5.9-android-arm64 /data/local/tmp/frida-server
+adb shell chmod 755 /data/local/tmp/frida-server
+adb shell "/data/local/tmp/frida-server -l 0.0.0.0 &"
+
+# Port forwarding (optionnel selon appareil) :
+adb forward tcp:27042 tcp:27042
+adb forward tcp:27043 tcp:27043
+
+# Vérification :
+frida-ps -Uai                                             # → liste apps
+
+# ─── ÉTAPE 3 : Proxy TLS et certificat CA ────────────────
+# Lancer Burp Suite :
+#   Proxy > Options > 192.168.X.Y:8080 (All interfaces)
+# OU lancer mitmproxy :
+mitmproxy -p 8080
+
+# Configurer le proxy Wi-Fi sur le téléphone :
+#   Paramètres > Wi-Fi > Modifier le réseau > Proxy manuel
+#   Hôte : <IP_PC>   Port : 8080
+
+# Installer certificat CA :
+#   Burp  : naviguer vers http://burp depuis le téléphone
+#   mitm  : naviguer vers http://mitm.it → Android → Installer
+
+# Redirection alternative (USB) :
+adb reverse tcp:8080 tcp:8080
+
+# Validation : naviguer sur https://example.com dans le navigateur
+#   → Requête visible dans le proxy sans erreur
+
+# ─── ÉTAPE 4 : Identifier l'app cible ───────────────────
+frida-ps -Uai                                             # Liste complète
+frida-ps -Uai | Select-String -Pattern "example"          # PowerShell
+frida-ps -Uai | grep -i "example"                         # Linux/macOS
+
+# ─── ÉTAPE 5 : Objection — Spawn (recommandé) ───────────
+objection -g com.example.app explore --startup-command "android sslpinning disable"
+
+# Résultat attendu dans la console :
+#   (agent) [ssl-pinning-bypass] Registering job...
+#   (agent) [ssl-pinning-bypass] TrustManager bypass applied
+#   (agent) [ssl-pinning-bypass] OkHTTP CertificatePinner bypass applied
+
+# ─── ÉTAPE 5 bis : Objection — Attach (si crash) ────────
+# Ouvrir l'app manuellement, puis :
+objection -g com.example.app explore
+
+# Dans le shell Objection :
+android sslpinning disable
+
+# ─── ÉTAPE 5 ter : Commandes de diagnostic Objection ────
+help android sslpinning
+android hooking search classes pin
+android hooking search classes trust
+android hooking search classes okhttp
+android hooking search classes ssl
+android hooking list classes
+android hooking list class_methods javax.net.ssl.SSLContext
+env
+
+# ─── ÉTAPE 6 : Validation dans le proxy ─────────────────
+# Naviguer dans l'app (login, API calls, etc.)
+# Vérifier dans Burp / mitmproxy :
+#   → Requêtes HTTPS de l'app apparaissent
+#   → Réponses visibles sans alerte SSL côté app
+#   → Headers et body lisibles
+
+# ─── NETTOYAGE ───────────────────────────────────────────
+# Quitter Objection :
+exit
+
+# Arrêter frida-server :
+adb shell "kill $(pidof frida-server)"
+
+# Retirer le certificat CA de l'appareil :
+#   Paramètres > Sécurité > Effacer les identifiants
+
+# Arrêter le proxy (Burp / mitmproxy)
+# Désactiver le débogage USB (si nécessaire)
